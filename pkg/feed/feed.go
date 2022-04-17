@@ -3,41 +3,88 @@ package feed
 import (
 	"entry_task/database"
 	"entry_task/model"
+	"errors"
 	"github.com/sirupsen/logrus"
 	"math/rand"
-	"time"
 )
 
 var productIDPool []string
-var productMap map[string]model.Product
+var products map[string]*model.Product
+
+type strategy interface {
+	GetFeed(uerName string, num int) ([]string, error)
+}
+
+var feedStategy strategy
 
 func Init(db *database.MyDB) error {
 	p, err := db.LoadProducts(0, 1000)
 	if err != nil {
 		return err
 	}
-	productMap = make(map[string]model.Product)
+	products = make(map[string]*model.Product)
 	for _, v := range p {
 		productIDPool = append(productIDPool, v.ProductID)
-		productMap[v.ProductID] = v
+		products[v.ProductID] = v
 	}
 	logrus.Infof("load product num %d", len(productIDPool))
+	feedStategy = RandomShuffle{}
+	//feedStategy = No{}
 	return nil
 }
 
-func GetFeed(userName string, num int) ([]model.Product, error) {
-	resultIDPool := productIDPool[:]
-	if len(productIDPool) < num {
-		resultIDPool = productIDPool
-	} else {
-		rand.Seed(time.Now().Unix())
-		rand.Shuffle(len(resultIDPool), func(i, j int) {
-			resultIDPool[i], resultIDPool[j] = resultIDPool[j], resultIDPool[i]
-		})
+const recommedPoolSize int = 100
+
+func GetFeed(userName string, num int) ([]*model.Product, error) {
+	if num > recommedPoolSize {
+		return nil, errors.New("over size")
 	}
-	result := make([]model.Product, 0, num)
-	for i := 0; i < len(resultIDPool) && i < num; i++ {
-		result = append(result, productMap[resultIDPool[i]])
+	ids, err := feedStategy.GetFeed(userName, num)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*model.Product, 0, num)
+	for i := 0; i < len(ids) && i < num; i++ {
+		p := products[ids[i]]
+		result = append(result, p)
 	}
 	return result, nil
+}
+
+type RandomShuffle struct {
+}
+
+func (r RandomShuffle) GetFeed(uerName string, num int) ([]string, error) {
+	var recommedIDPool []string
+	if len(productIDPool) <= recommedPoolSize {
+		recommedIDPool = productIDPool[:]
+	} else {
+		begin := int(rand.Int31n(int32(len(productIDPool) - recommedPoolSize)))
+		recommedIDPool = productIDPool[begin : begin+recommedPoolSize+1]
+	}
+	rand.Shuffle(len(recommedIDPool), func(i, j int) {
+		recommedIDPool[i], recommedIDPool[j] = recommedIDPool[j], recommedIDPool[i]
+	})
+	return recommedIDPool[0:num], nil
+}
+
+type Random struct {
+}
+
+func (r Random) GetFeed(uerName string, num int) ([]string, error) {
+	var recommedIDPool []string
+	if len(productIDPool) <= recommedPoolSize {
+		recommedIDPool = productIDPool[:]
+	} else {
+		begin := int(rand.Int31n(int32(len(productIDPool) - recommedPoolSize)))
+		recommedIDPool = productIDPool[begin : begin+recommedPoolSize+1]
+	}
+	return recommedIDPool, nil
+}
+
+type No struct {
+}
+
+func (r No) GetFeed(uerName string, num int) ([]string, error) {
+	return productIDPool[0:num], nil
 }

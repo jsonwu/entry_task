@@ -1,0 +1,6 @@
+MasterDB:
+  DSNTemplate: "%s:%s@tcp(%s)/%s?......"
+  Username: ""
+  Password: ""
+  DBName: ""
+  Addr:""

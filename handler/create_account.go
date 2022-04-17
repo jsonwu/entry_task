@@ -32,23 +32,25 @@ func hashSalt(str, salt string) string {
 	return fmt.Sprintf("%x", m.Sum(nil))
 }
 
-func (h *Handler) CreateAccount(c *gin.Context, base model.UserBase) errno.Payload {
-	var req createAccountReq
+//to user user center
+func (h *Handler) CreateAccount(c *gin.Context, base model.UserBase) model.Payload {
+	var req model.CreateAccountReq
 	err := c.ShouldBind(&req)
 	if err != nil {
+		logs.Errorf("ShouldBind err %s", err.Error())
 		return errno.ERR_INVALID_PARAM
 	}
 
-	clog := logs.WithFields(logs.Fields{"user_name": req.UserName, "user_type": req.UserType})
-	errPaylod := checkCreateAccountReqParam(req)
+	errPaylod := checkCreateAccountReqParam(&req)
 	if errPaylod.Code != errno.CODE_SUCCESS {
 		return errPaylod
 	}
 
-	clog.Infof("CreateAccount req %v", req)
+	clog := logs.WithFields(logs.Fields{"user_name": req.UserName, "user_type": req.UserType})
+	clog.Infof("CreateAccount req %+v", req)
 	salt := randomStr(10)
 	encodePassWord := hashSalt(req.Password, salt)
-	err = h.DB.CreateUser(model.User{UserName: req.UserName, Password: encodePassWord, Salt: salt, UserType: req.UserType, Email: req.Email, ProfileUri: req.Email})
+	err = h.DB.CreateUser(&model.User{UserName: req.UserName, Password: encodePassWord, Salt: salt, UserType: req.UserType, Email: req.Email, ProfileUri: req.ProfileUri})
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate") {
 			clog.Infof("user name exist")
@@ -61,6 +63,18 @@ func (h *Handler) CreateAccount(c *gin.Context, base model.UserBase) errno.Paylo
 	return errno.OK(nil)
 }
 
-func checkCreateAccountReqParam(req createAccountReq) errno.Payload {
+func checkCreateAccountReqParam(req *model.CreateAccountReq) model.Payload {
+	if !isUserNameValid(req.UserName) {
+		return errno.ERR_PARAM_USER_NAME
+	}
+	if !isPasswordValid(req.Password) {
+		return errno.ERR_PARAM_PASSWORD
+	}
+	if !isUserTypeValid(req.UserType) {
+		return errno.ERR_PARAM_USER_TYPE
+	}
+	if !isEmailValid(req.Email) {
+		return errno.ERR_PARAM_USER_TYPE
+	}
 	return errno.OK(nil)
 }

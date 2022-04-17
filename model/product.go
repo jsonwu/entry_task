@@ -3,12 +3,13 @@ package model
 type PStatus uint8
 
 const (
-	ProudctStatusNormal   PStatus = 1
-	ProudctStatusAuditing PStatus = 2
-	ProudctStatusOff      PStatus = 3
-	ProudctStatusForbiden PStatus = 4
-	ProudctStatusEdit     PStatus = 5
-	ProudctStatusDeleted  PStatus = 6
+	ProudctStatusNone PStatus = iota
+	ProudctStatusNormal
+	ProudctStatusAuditing
+	ProudctStatusOff
+	ProudctStatusForbiden
+	ProudctStatusEdit
+	ProudctStatusDeleted
 )
 
 type Product struct {
@@ -76,5 +77,5 @@ type Brand struct {
 }
 
 func (Brand) TableName() string {
-	return "attr_tab"
+	return "brand_tab"
 }

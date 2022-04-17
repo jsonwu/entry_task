@@ -4,13 +4,13 @@ import (
 	"entry_task/database"
 	"entry_task/model"
 	"errors"
-	"github.com/sirupsen/logrus"
+	logs "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
 
 var attrMux sync.Mutex
-var attrs map[string]model.Attr
+var attrs map[string]*model.Attr
 
 func startAttrManager(db *database.MyDB) error {
 	am, err := LoadAttr(db)
@@ -24,32 +24,34 @@ func startAttrManager(db *database.MyDB) error {
 			<-ticker.C
 			am, err := LoadAttr(db)
 			if err != nil {
-				logrus.Errorf("LoadBrand err %s", err.Error())
+				logs.Errorf("LoadBrand err %s", err.Error())
 				continue
 			}
+			logs.Infof("reload attr len %d", len(attrs))
 			attrMux.Lock()
 			attrs = am
 		}
 		ticker.Stop()
 	}()
+	logs.Infof("start attr success and load attr %+v", attrs)
 	return nil
 }
 
-func LoadAttr(db *database.MyDB) (map[string]model.Attr, error) {
+func LoadAttr(db *database.MyDB) (map[string]*model.Attr, error) {
 	attrs, err := db.LoadAttr()
 	if err != nil {
 		return nil, err
 	}
-	am := make(map[string]model.Attr)
+	am := make(map[string]*model.Attr)
 	for _, v := range attrs {
 		am[v.Name] = v
 	}
 	return am, nil
 }
 
-func GetAttr(attrName string) (model.Attr, error) {
+func GetAttr(attrName string) (*model.Attr, error) {
 	if v, ok := attrs[attrName]; ok {
 		return v, nil
 	}
-	return model.Attr{}, errors.New("no exist")
+	return nil, errors.New("no exist")
 }

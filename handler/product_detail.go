@@ -8,20 +8,22 @@ import (
 	"strings"
 )
 
-func (h *Handler) PorductDetails(c *gin.Context, base model.UserBase) errno.Payload {
-	var req getProductInfoReq
+func (h *Handler) PorductDetails(c *gin.Context, base model.UserBase) model.Payload {
+	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
+	var req model.GetProductInfoReq
 	err := c.ShouldBind(&req)
 	if err != nil {
+		clog.Errorf("DB.GetUser err %s", err.Error())
 		return errno.ERR_INVALID_PARAM
 	}
 
-	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
-	errPaylaod := checkGetProductInfoReq(req)
+	errPaylaod := checkGetProductInfoReq(&req)
 	if errPaylaod.Code != errno.CODE_SUCCESS {
 		return errPaylaod
 	}
 
-	productInfo, attrs, err := h.DB.GetProductWithAttr(req.ShopID, req.ProductID)
+	clog.Infof("begin load product in db")
+	productInfo, attrs, err := h.DB.GetProductAndAttr(req.ShopID, req.ProductID)
 	if err != nil {
 		clog.Errorf("DB.GetProductWithAttr err %s", err.Error())
 		return errno.ERR_INTERNAL
@@ -29,7 +31,9 @@ func (h *Handler) PorductDetails(c *gin.Context, base model.UserBase) errno.Payl
 	if productInfo == nil {
 		return errno.ERR_PRODUCT_NO_EXIST
 	}
-	resp := productInfoReqResp{ProductInfo{
+	clog.Infof("load product in db success")
+
+	resp := model.ProductInfoReqResp{model.ProductInfo{
 		ShopID:     productInfo.ShopID,
 		ProductID:  productInfo.ProductID,
 		Title:      productInfo.Title,
@@ -39,6 +43,9 @@ func (h *Handler) PorductDetails(c *gin.Context, base model.UserBase) errno.Payl
 		BrandID:    productInfo.BrandID,
 		CategoryID: productInfo.CategoryID,
 	}}
+	if base.UserType == model.UserTypeSeller {
+		resp.Status = int(productInfo.Status)
+	}
 	resp.ShowUris = []string{}
 	if len(productInfo.ShowUris) != 0 {
 		resp.ShowUris = strings.Split(productInfo.ShowUris, ",")
@@ -47,13 +54,20 @@ func (h *Handler) PorductDetails(c *gin.Context, base model.UserBase) errno.Payl
 	if len(productInfo.Details) != 0 {
 		resp.Details = strings.Split(productInfo.Details, ",")
 	}
-	resp.AttrInfo = make([]AttrInfo, 0, len(attrs))
+	resp.AttrInfos = make([]model.AttrInfo, 0, len(attrs))
 	for _, v := range attrs {
-		resp.AttrInfo = append(resp.AttrInfo, AttrInfo{v.Name, v.Value})
+		resp.AttrInfos = append(resp.AttrInfos, model.AttrInfo{v.Name, v.Value})
 	}
+	clog.Infof("get proudct detail success")
 	return errno.OK(resp)
 }
 
-func checkGetProductInfoReq(req getProductInfoReq) errno.Payload {
+func checkGetProductInfoReq(req *model.GetProductInfoReq) model.Payload {
+	if !isProductIDValid(req.ProductID) {
+		return errno.ERR_PARAM_PRODUCT_ID
+	}
+	if !isShopIDValid(req.ShopID) {
+		return errno.ERR_PARAM_SHOP_ID
+	}
 	return errno.OK(nil)
 }

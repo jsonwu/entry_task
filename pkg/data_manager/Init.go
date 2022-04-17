@@ -7,6 +7,7 @@ func Init(db *database.MyDB) error {
 	if err != nil {
 		return err
 	}
+
 	err = startBrandManager(db)
 	if err != nil {
 		return err

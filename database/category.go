@@ -2,14 +2,14 @@ package database
 
 import "entry_task/model"
 
-func (db *MyDB) CreateCategory(c model.Category) error {
+func (db *MyDB) CreateCategory(c *model.Category) error {
 	result := db.db.Create(&c)
 	return result.Error
 }
 
-func (db *MyDB) LoadCategory() ([]model.Category, error) {
-	var cs []model.Category
-	result := db.db.Model(&model.Brand{}).Find(&cs)
+func (db *MyDB) LoadCategory() ([]*model.Category, error) {
+	var cs []*model.Category
+	result := db.db.Model(&model.Category{}).Find(&cs)
 	if result.Error != nil {
 		return nil, result.Error
 	}

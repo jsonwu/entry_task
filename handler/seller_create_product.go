@@ -4,23 +4,20 @@ import (
 	"entry_task/errno"
 	"entry_task/model"
 	"entry_task/pkg/id"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	logs "github.com/sirupsen/logrus"
 	"strings"
 )
 
-func (h *Handler) SellerCreateProduct(c *gin.Context, base model.UserBase) errno.Payload {
-	var req createProductReq
+func (h *Handler) SellerCreateProduct(c *gin.Context, base model.UserBase) model.Payload {
+	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
+	var req model.CreateProductReq
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
+		logs.Errorf("ShouldBindJson err %s", err.Error())
 		return errno.ERR_INVALID_PARAM
 	}
-	errPaylod := checkCreatProductParam(req)
-	if errPaylod.Code != 0 {
-		return errPaylod
-	}
-	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
+	clog.Infof("SellerCreateProduct req %+v", req)
 
 	productID := id.NewProductID()
 	dbProduct := model.Product{
@@ -33,18 +30,18 @@ func (h *Handler) SellerCreateProduct(c *gin.Context, base model.UserBase) errno
 		Stock:      req.Stock,
 		BrandID:    req.BrandID,
 		CategoryID: req.CategoryID,
+		Status:     model.ProudctStatusAuditing,
 		Details:    strings.Join(req.Details, ","),
 	}
-	productAttrs := make([]model.ProductAttr, 0, len(req.AttrInfo))
-	for _, v := range req.AttrInfo {
-		productAttrs = append(productAttrs, model.ProductAttr{ProductID: req.ProductID, Name: v.Name, Value: v.Value})
+	productAttrs := make([]*model.ProductAttr, 0, len(req.AttrInfos))
+	for _, v := range req.AttrInfos {
+		productAttrs = append(productAttrs, &model.ProductAttr{ProductID: productID, Name: v.Name, Value: v.Value})
 	}
 
-	errPaylod = checkProduct(dbProduct)
+	errPaylod := checkCreatProductParam(&req, &dbProduct)
 	if errPaylod.Code != 0 {
 		return errPaylod
 	}
-	// checker shop owner
 	shop, err := h.DB.GetShopInfo(req.ShopID)
 	if err != nil {
 		clog.Errorf("DB.GetShopInfo %s", err.Error())
@@ -54,28 +51,22 @@ func (h *Handler) SellerCreateProduct(c *gin.Context, base model.UserBase) errno
 		return errno.ERR_SHOP_NOT_EXIST
 	}
 	if shop.UserName != base.UserName {
-		clog.Errorf("create shop user name err")
-		return errno.ERR_NO_PERMISSION
+		clog.Errorf("create shop shop owner: %s  user: %s", shop.UserName, base.UserName)
+		return errno.ERR_NOT_SHOP_OWNER
 	}
-	fmt.Println(productAttrs)
-
-	err = h.DB.CreateProductWithAttr(dbProduct, productAttrs)
+	clog.Infof("beiin create product in db")
+	err = h.DB.CreateProductWithAttr(&dbProduct, productAttrs)
 	if err != nil {
 		clog.Errorf("DB.CreateProduct err %s", err.Error())
 		return errno.ERR_INTERNAL
 	}
-	clog.Infof("create shop success")
-	return errno.OK(createProductResp{ProductID: productID})
+	clog.Infof("create product success")
+	return errno.OK(model.CreateProductResp{ProductID: productID})
 }
 
-func checkCreatProductParam(product createProductReq) errno.Payload {
-	return errno.OK(nil)
-}
-
-func checkProduct(product model.Product) errno.Payload {
-	if len(product.Title) < 1 || len(product.Title) > 20 {
-		return errno.ERR_PRODUCT_TITLE_LEN
+func checkCreatProductParam(req *model.CreateProductReq, product *model.Product) model.Payload {
+	if !(isAttrValid(req.AttrInfos)) {
+		return errno.ERR_ATTR_NAME
 	}
-	//todo
-	return errno.OK(nil)
+	return checkProduct(product)
 }

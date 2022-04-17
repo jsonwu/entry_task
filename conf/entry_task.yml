@@ -1,0 +1,11 @@
+Develop:
+  ServicePort: 8080
+  LogLevel: "debug"
+  ConsulLog: true
+  FileLog: false
+
+Product:
+  ServicePort: 8080
+  LogLevel: "info"
+  ConsulLog: false
+  FileLog: true

@@ -7,17 +7,17 @@ import (
 	logs "github.com/sirupsen/logrus"
 )
 
-func (h *Handler) Login(c *gin.Context, base model.UserBase) errno.Payload {
-	var req loginReq
+func (h *Handler) Login(c *gin.Context, base model.UserBase) model.Payload {
+	var req model.LoginReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		logs.Errorf("gin bind err %s", err.Error())
+		logs.Errorf("ShouldBind err %s", err.Error())
 		return errno.ERR_INVALID_PARAM
 	}
 	clog := logs.WithFields(logs.Fields{"user_name": req.UserName, "user_type": req.UserType})
-	clog.Infof("Login request: %v", req)
+	clog.Infof("Login request: %+v", req)
 
-	errPaylod := checkLoginParam(req)
+	errPaylod := checkLoginParam(&req)
 	if errPaylod.Code != 0 {
 		clog.Debugf("param err %v", errPaylod.Msg)
 		return errPaylod
@@ -54,16 +54,12 @@ func (h *Handler) Login(c *gin.Context, base model.UserBase) errno.Payload {
 	return errno.OK(nil)
 }
 
-func checkLoginParam(req loginReq) errno.Payload {
-	if len(req.UserName) < 1 || len(req.UserName) > 20 {
-		return errno.ERR_USER_NAME_LEN
+func checkLoginParam(req *model.LoginReq) model.Payload {
+	if !isUserNameValid(req.UserName) {
+		return errno.ERR_PARAM_USER_NAME
 	}
-	if len(req.Password) < 1 || len(req.Password) > 20 {
-		return errno.ERR_PASSWORD_LEN
-	}
-
 	if !(req.UserType == model.UserTypeSeller || req.UserType == model.UserTypeCustomer) {
-		return errno.ERR_USER_TYPE
+		return errno.ERR_PARAM_USER_TYPE
 	}
 	return errno.OK(nil)
 }

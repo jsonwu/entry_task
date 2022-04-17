@@ -1,67 +1,63 @@
-package handler
+package model
 
-/*
-import (
-	"entry_task/errno"
-	"entry_task/model"
-)
-
-type createAccountReq struct {
-	UserName   string         `json:"user_name"`
-	Password   string         `json:"password"`
-	UserType   model.UserType `json:"user_type"`
-	Email      string         `json:"email"`
-	ProfileUri string         `json:"profile_uri"`
+type Payload struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data,omitempty"`
 }
 
-type loginReq struct {
-	UserName string         `form:"user_name"  binding:"required"`
-	Password string         `form:"password" binding:"required"`
-	UserType model.UserType `form:"user_type" binding:"required"`
+type CreateAccountReq struct {
+	UserName   string   `json:"user_name"`
+	Password   string   `json:"password"`
+	UserType   UserType `json:"user_type"`
+	Email      string   `json:"email"`
+	ProfileUri string   `json:"profile_uri"`
+}
+
+type LoginReq struct {
+	UserName string   `form:"user_name"  binding:"required"`
+	Password string   `form:"password" binding:"required"`
+	UserType UserType `form:"user_type" binding:"required"`
 }
 
 type GetUserInfoResp struct {
-	UserName   string         `json:"user_name"`
-	UserType   model.UserType `json:"user_type"`
-	Email      string         `json:"email"`
-	ProfileUri string         `json:"profile_uri"`
+	UserName   string   `json:"user_name"`
+	UserType   UserType `json:"user_type"`
+	Email      string   `json:"email"`
+	ProfileUri string   `json:"profile_uri"`
 }
 
-type createShopReq struct {
+type CreateShopReq struct {
 	Name         string `json:"name"`
 	Introduction string `json:"introduction"`
 }
 
-type createShopResp struct {
+type CreateShopResp struct {
 	ShopID string `json:"shop_id" `
 }
 
-type sellerShopListResp struct {
+type SellerShopListResp struct {
 	ShopBaseInfos []ShopBaseInfo `json:"shop_base_infos"`
 }
 
-type sellerGetShopInfoReq struct {
+type SellerGetShopInfoReq struct {
 	ShopID string `form:"shop_id" binding:"required"`
 }
 
-type sellerGetShopInfoResp struct {
+type SellerGetShopInfoResp struct {
 	ShopInfo
 }
 
-type createProductReq struct {
+type CreateProductReq struct {
 	ProductInfo
 }
 
-type createProductResp struct {
+type CreateProductResp struct {
 	ProductID string `json:"product_id"`
 }
 
-type updateProductReq struct {
+type UpdateProductReq struct {
 	ProductInfo
-}
-
-func (r updateProductReq) isValidate() model.Payload {
-	return errno.OK(nil)
 }
 
 type SellerGetShopProductsReq struct {
@@ -71,7 +67,7 @@ type SellerGetShopProductsReq struct {
 	PageSize int    `form:"page_size" `
 }
 
-type sellerGetShopProductsResp struct {
+type SellerGetShopProductsResp struct {
 	ProductBaseInfos []ProductBaseInfo `json:"shop_base_infos,omitempty"`
 	PageNum          int               `json:"page_number"`
 	PageSize         int               `json:"page_size"`
@@ -79,77 +75,63 @@ type sellerGetShopProductsResp struct {
 }
 
 type UpdateProductStatusReq struct {
-	ShopID     string `json:"shop_id"`
-	ProductID  string `json:"product_id"`
-	Status     uint8  `json:"status"`
-	ProviderID string `json:"provider_id"`
+	ShopID     string  `json:"shop_id"`
+	ProductID  string  `json:"product_id"`
+	Status     PStatus `json:"status"`
+	ProviderID string  `json:"provider_id"`
 }
 
-type customerShopListReq struct {
+type CustomerShopListReq struct {
 	PageNum  int `form:"page_num"`
 	PageSize int `form:"page_size"`
 }
 
-type getProductInfoReq struct {
+type GetProductInfoReq struct {
 	ShopID    string `form:"shop_id" binding:"required"`
 	ProductID string `form:"product_id" binding:"required"`
 }
 
-type productInfoReqResp struct {
+type ProductInfoReqResp struct {
 	ProductInfo
 }
 
-type customerShopListResp struct {
+type CustomerShopListResp struct {
 	ShopBaseInfos []ShopBaseInfo `json:"shop_base_infos,omitempty"`
 	PageNum       int            `json:"page_number"`
 	PageSize      int            `json:"page_size"`
 	TotalCount    int64          `json:"total_count"`
 }
 
-type customerGetShopProductsReq struct {
+type CustomerGetShopProductsReq struct {
 	ShopID   string `form:"shop_id" binding:"required"`
 	PageNum  int    `form:"page_num"`
 	PageSize int    `form:"page_size"`
 }
 
-func (c customerGetShopProductsReq) isValidate() model.Payload {
-	if c.PageSize < 0 || c.PageSize > 100 {
-		return errno.ERR_PAGESIZE
-	}
-	if c.PageNum < 0 || c.PageNum > 100 {
-		return errno.ERR_PAGESIZE
-	}
-	if len(c.ShopID) == 0 || len(c.ShopID) > 36 {
-		return errno.ERR_INVALID_PARAM
-	}
-
-	return errno.OK(nil)
-}
-
-type customerGetShopProductsResp struct {
+type CustomerGetShopProductsResp struct {
 	ProductBaseInfos []ProductBaseInfo `json:"shop_base_infos,omitempty"`
 	PageNum          int               `json:"page_num"`
 	PageSize         int               `json:"page_size"`
 	TotalCount       int64             `json:"total_count"`
 }
 
-type customerProductSearchReq struct {
+type CustomerProductSearchReq struct {
 	KeyWord  string `form:"keyword" binding:"required"`
 	PageNum  int    `form:"page_num"`
 	PageSize int    `form:"page_size"`
 }
 
-type customerSearchResp struct {
+type CustomerSearchResp struct {
 	ProductBaseInfos []ProductBaseInfo `json:"product_base_infos,omitempty"`
 	PageNum          int               `json:"page_number"`
 	PageSize         int               `json:"page_size"`
 	TotalCount       int64             `json:"total_count"`
 }
 
-type feedReq struct {
+type FeedReq struct {
 	Num int `form:"num"`
 }
-type feedResp struct {
+type FeedResp struct {
 	ProductBaseInfos []ProductBaseInfo
 }
 
@@ -164,7 +146,7 @@ type ShopInfo struct {
 	Name         string `json:"name"`
 	Introduction string `json:"introduction,omitempty"`
 	Level        int8   `json:"level,omitempty"`
-	location     string `json:"location,omitempty"`
+	Location     string `json:"location,omitempty"`
 }
 
 type AttrInfo struct {
@@ -176,14 +158,15 @@ type ProductInfo struct {
 	ShopID     string     `json:"shop_id"`
 	ProductID  string     `json:"product_id"`
 	Title      string     `json:"title"`
-	CoverUri   string     `json:"cover_uri"`
+	CoverUri   string     `json:"cover_uri,omitempty"`
 	ShowUris   []string   `json:"show_uris"`
 	Price      uint32     `json:"price"`
 	Stock      uint32     `json:"stock"`
-	BrandID    int64      `json:"brand_id"`
+	BrandID    int64      `json:"brand_id,omitempty"`
 	CategoryID int64      `json:"category_id"`
-	Details    []string   `json:"details"`
-	AttrInfo   []AttrInfo `json:"attr_info"`
+	Status     int        `json:"status,omitempty"`
+	Details    []string   `json:"details,omitempty"`
+	AttrInfos  []AttrInfo `json:"attr_infos,omitempty"`
 }
 
 type ProductBaseInfo struct {
@@ -192,6 +175,4 @@ type ProductBaseInfo struct {
 	Title     string `json:"title"`
 	CoverUri  string `json:"cover_uri"`
 	Price     uint32 `json:"price"`
-A}
-
-*/
+}

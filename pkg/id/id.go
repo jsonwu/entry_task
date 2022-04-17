@@ -1,13 +1,13 @@
 package id
 
-import "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 func NewSessionID() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }
 func NewProductID() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }
 func NewShopID() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }

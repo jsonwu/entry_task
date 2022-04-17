@@ -9,27 +9,34 @@ import (
 	"strings"
 )
 
-func (h *Handler) SellerCreateShop(c *gin.Context, base model.UserBase) errno.Payload {
-	var req createShopReq
+const DefaultShopLevel = 1
+
+func (h *Handler) SellerCreateShop(c *gin.Context, base model.UserBase) model.Payload {
+	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
+	var req model.CreateShopReq
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
+		logs.Errorf("ShouldBindJson err %s", err.Error())
 		return errno.ERR_INVALID_PARAM
 	}
-	clog := logs.WithFields(logs.Fields{"user_name": base.UserName, "user_type": base.UserType})
-	clog.Infof("SellerCreateShop req %v", req)
+	clog.Infof("SellerCreateShop req %+v", req)
+	errPaylaod := checkSellerCreateShopParm(&req)
+	if errPaylaod.Code != errno.CODE_SUCCESS {
+		return errPaylaod
+	}
 
 	userName := base.UserName
-	if base.UserType != 1 {
-		return errno.ERR_NO_PERMISSION
-	}
 	shopID := id.NewShopID()
 	shop := model.SellerShop{
 		ShopID:       shopID,
 		Name:         req.Name,
 		UserName:     userName,
+		Level:        DefaultShopLevel,
 		Introduction: req.Introduction,
 	}
-	err = h.DB.CreateShop(shop)
+
+	clog.Infof("begin  create shop in db")
+	err = h.DB.CreateShop(&shop)
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate") {
 			clog.Infof("shop name exist")
@@ -38,15 +45,13 @@ func (h *Handler) SellerCreateShop(c *gin.Context, base model.UserBase) errno.Pa
 		clog.Errorf("DB.CreateShop err %s", err.Error())
 		return errno.ERR_INTERNAL
 	}
-	return errno.OK(createShopResp{ShopID: shopID})
+	clog.Infof("seller create shop success")
+	return errno.OK(model.CreateShopResp{ShopID: shopID})
 }
-func checkSellerCreateShopParm(req createShopReq) errno.Payload {
-	if len(req.Name) == 0 || len(req.Name) > 20 {
-		return errno.ERR_USER_NAME_LEN
+func checkSellerCreateShopParm(req *model.CreateShopReq) model.Payload {
+	if !isShopNameValid(req.Name) {
+		return errno.ERR_PARAM_SHOP_NAME
 	}
-	if len(req.Introduction) == 0 || len(req.Introduction) > 20 {
-		return errno.ERR_PASSWORD_LEN
-	}
-	return errno.OK(nil)
+	//Introduction
 	return errno.OK(nil)
 }
